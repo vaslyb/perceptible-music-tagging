@@ -1,0 +1,4 @@
+name: xai_music
+channels:
+  - defaults
+prefix: /home/vaslyb/miniconda3/envs/xai_music
