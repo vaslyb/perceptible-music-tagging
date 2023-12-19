@@ -2,7 +2,7 @@
 
 ## Overview
 
-This GitHub repository contains the code necessary to reproduce the results presented in the paper titled "Perceptual Musical Features for Interpretable Audio Tagging."
+This GitHub repository contains the code necessary to reproduce the results presented in the paper titled [Perceptual Musical Features for Interpretable Audio Tagging](https://arxiv.org/abs/2312.11234)
 
 ## Contents
 
