@@ -22,3 +22,18 @@ This GitHub repository contains the code necessary to reproduce the results pres
 ## Usage
 
 To reproduce the experiments and results from the paper, follow the instructions in the provided scripts and utilize the relevant data from the gtzan and jamendo repositories.
+
+## Citation
+
+If you find the paper's results useful, please consider citing the paper.
+
+```bibtex
+
+@misc{lyberatos2023perceptual,
+      title={Perceptual Musical Features for Interpretable Audio Tagging}, 
+      author={Vassilis Lyberatos and Spyridon Kantarelis and Edmund Dervakos and Giorgos Stamou},
+      year={2023},
+      eprint={2312.11234},
+      archivePrefix={arXiv},
+      primaryClass={cs.SD}
+}
