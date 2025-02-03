@@ -41,7 +41,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
         '--dataset', type=str, default='jamendo',
-                        choices=['jamendo', 'gtzan']
+                        choices=['jamendo', 'gtzan','magnatagatune']
                         )
     parser.add_argument(
     '--interpretation', type=str, default='xgboost',
@@ -49,7 +49,15 @@ def main():
                     )
     
     args = parser.parse_args()
-    
+    music_tags = [
+        "guitar", "classical", "slow", "techno", "strings", "drums", "electronic", 
+        "rock", "fast", "piano", "ambient", "beat", "violin", "vocal", "synth", 
+        "female", "indian", "opera", "male", "singing", "vocals", "no vocals", 
+        "harpsichord", "loud", "quiet", "flute", "woman", "male vocal", "no vocal", 
+        "pop", "soft", "sitar", "solo", "man", "classic", "choir", "voice", 
+        "new age", "dance", "male voice", "female vocal", "beats", "harp", "cello", 
+        "no voice", "weird", "country", "metal", "female voice", "choral"
+    ]    
     all = ['Melody','Articulation','Rhythm Complexity','Rhythm Stability', 'Dissonance', 'Atonality', 'Mode', 
     'Dominants', 'Subdominants', 'sub-sub', 'sub-dom', 'dom-sub', 'dom-tonic', 'glob-sub',  'glob-dom', 
     'sub-sub-dom', 'sub-dom-sub', 'dom-sub-dom', 'sub-dom-tonic', 'dom-tonic-sub', 
@@ -74,16 +82,25 @@ def main():
         'Spectral-Energyband-Low','Spectral-Energyband-Middle-High','Spectral-Energyband-Middle-Low','Spectral-Entropy','Spectral-Flux',
         'Spectral-Rolloff','Spectral-Spread','Onset-Rate','Length','BPM','Beats-Loud']
 
-        if(args.dataset == "jamendo"):
-            pth_train = './jamendo/perceptual_features/train.csv'
-            pth_test = './jamendo/perceptual_features/test.csv'
-            pth_val = './jamendo/perceptual_features/validation.csv'
+        if(args.dataset == "jamendo") or args.dataset == "magnatagatune":
+            if args.dataset == "magnatagatune":
+                all.remove('Length')
+                pth = './magnatagatune/perceptual_features.csv'
+                df = pd.read_csv(pth)
+                df.rename(columns = {'dom':'Dominants','sub':'Subdominants'}, inplace = True)
+                df_train,df_test = train_test_split(df,train_size=0.8, random_state=4)
+                df_train,df_val = train_test_split(df_train,train_size=0.8, random_state=4)
+                signal.remove('Length')
+            elif(args.dataset == "jamendo"):
+                pth_train = './jamendo/perceptual_features/train.csv'
+                pth_test = './jamendo/perceptual_features/test.csv'
+                pth_val = './jamendo/perceptual_features/validation.csv'
 
-            df_train = pd.read_csv(pth_train)
-            df_test = pd.read_csv(pth_test)
-            df_val = pd.read_csv(pth_val)
+                df_train = pd.read_csv(pth_train)
+                df_test = pd.read_csv(pth_test)
+                df_val = pd.read_csv(pth_val)
 
-            signal.append('Vocal-Instrumental')
+                signal.append('Vocal-Instrumental')
 
 
             # Names
@@ -149,6 +166,7 @@ def main():
                 writer.writerows(datas)
 
         if(args.dataset == "gtzan"):
+
             pth = './gtzan/perceptual_features.csv'
             df = pd.read_csv(pth).drop(['Track'],axis=1)
             df.rename(columns = {'dom':'Dominants','sub':'Subdominants'}, inplace = True)
@@ -159,6 +177,7 @@ def main():
             # Names
             names = ["Mid-level", "Harmonic", "Signal","Accuracy"]
             datas = list()
+            signal.remove('Length')
             for a in range(2):
                 features = midlevel+harmonic+signal
                 drop = ['Track']
@@ -178,7 +197,6 @@ def main():
                     for c in range(2):
                         if (a==0 and b==0 and c==0):
                             datas.append([0,0,0,0])
-                            print(a,b,c)
                         else:
                             if(c==0):
                                 features3 = [x for x in features2 if x not in signal]
@@ -212,8 +230,8 @@ def main():
                                     if j == 1:
                                         y_tes.append(index)
                                         break
-
                             xgb_estimator = xgb.XGBClassifier(max_depth=2,eta= 0.3,objective='multi:softmax',num_class=10,importance_type='weight')
+                            print(y_tra)
                             xgb_estimator.fit(x_tr, y_tra,verbose=True)
                             value = xgb_estimator.score(x_te,y_tes)
                             datas.append([a,b,c,value])
@@ -262,17 +280,27 @@ def main():
             multilabel_model.fit(x_tr, y_tr,verbose=True)
 
 
-        elif(args.dataset == "gtzan"):
+        elif(args.dataset == "gtzan") or (args.dataset == "magnatagatune"):
+            if args.dataset == "magnatagatune":
+                all.remove('Length')
+                pth = './magnatagatune/perceptual_features.csv'
+                df = pd.read_csv(pth).drop(['Track'],axis=1)
+                df.rename(columns = {'dom':'Dominants','sub':'Subdominants'}, inplace = True)
+                x = df[all]
+                y = df.drop(all,axis=1)
+                y = y[music_tags]
+                labels = list(y.columns)
+                x_tr,x_te,y_tr,y_te = train_test_split(x,y,train_size=0.8, random_state=4)
+            elif(args.dataset == "gtzan"):
+                pth = './gtzan/perceptual_features.csv'
+                df = pd.read_csv(pth).drop(['Track'],axis=1)
+                df.rename(columns = {'dom':'Dominants','sub':'Subdominants'}, inplace = True)
 
-            pth = './gtzan/perceptual_features.csv'
-            df = pd.read_csv(pth).drop(['Track'],axis=1)
-            df.rename(columns = {'dom':'Dominants','sub':'Subdominants'}, inplace = True)
+                x = df[all]
+                y = df.drop(all,axis=1)
+                labels = list(y.columns)
 
-            x = df[all]
-            y = df.drop(all,axis=1)
-            labels = list(y.columns)
-
-            x_tr,x_te,y_tr,y_te = train_test_split(x,y,train_size=0.8, random_state=4)
+                x_tr,x_te,y_tr,y_te = train_test_split(x,y,train_size=0.8, random_state=4)
 
             scaler = StandardScaler()
             scaler.fit(x_tr)

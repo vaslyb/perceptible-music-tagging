@@ -38,10 +38,19 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
         '--dataset', type=str, default='jamendo',
-                        choices=['jamendo', 'gtzan']
+                        choices=['jamendo', 'gtzan','magnatagatune'],
                         )
 
     args = parser.parse_args()
+    music_tags = [
+        "guitar", "classical", "slow", "techno", "strings", "drums", "electronic", 
+        "rock", "fast", "piano", "ambient", "beat", "violin", "vocal", "synth", 
+        "female", "indian", "opera", "male", "singing", "vocals", "no vocals", 
+        "harpsichord", "loud", "quiet", "flute", "woman", "male vocal", "no vocal", 
+        "pop", "soft", "sitar", "solo", "man", "classic", "choir", "voice", 
+        "new age", "dance", "male voice", "female vocal", "beats", "harp", "cello", 
+        "no voice", "weird", "country", "metal", "female voice", "choral"
+    ]
 
 
     all = ['Melody','Articulation','Rhythm Complexity','Rhythm Stability', 'Dissonance', 'Atonality', 'Mode', 
@@ -53,37 +62,47 @@ def main():
     'Spectral-Energyband-Low','Spectral-Energyband-Middle-High','Spectral-Energyband-Middle-Low','Spectral-Entropy','Spectral-Flux','Spectral-Rolloff','Spectral-Spread','Onset-Rate','Length','BPM',
     'Beats-Loud']
 
-    if(args.dataset == "jamendo"):
-        pth_train = './jamendo/perceptual_features/train.csv'
-        pth_test = './jamendo/perceptual_features/test.csv'
-        pth_val = './jamendo/perceptual_features/validation.csv'
+    if(args.dataset == "jamendo" or args.dataset == "magnatagatune"):
+        if (args.dataset == "jamendo"):
+          pth_train = './jamendo/perceptual_features/train.csv'
+          pth_test = './jamendo/perceptual_features/test.csv'
+          pth_val = './jamendo/perceptual_features/validation.csv'
 
-        all.append('Vocal-Instrumental')
+          all.append('Vocal-Instrumental')
 
-        df_train = pd.read_csv(pth_train).drop(['Track'],axis=1)
-        df_test = pd.read_csv(pth_test).drop(['Track'],axis=1)
-        df_val = pd.read_csv(pth_val).drop(['Track'],axis=1)
+          df_train = pd.read_csv(pth_train).drop(['Track'],axis=1)
+          df_test = pd.read_csv(pth_test).drop(['Track'],axis=1)
+          df_val = pd.read_csv(pth_val).drop(['Track'],axis=1)
 
-        x_tr = df_train[all]
-        y_tr = df_train.drop(all,axis=1)
-        x_te = df_test[all]
-        y_te = df_test.drop(all,axis=1)
-        x_va = df_val[all]
-        y_va = df_val.drop(all,axis=1)
-        labels = list(y_tr.columns)
+          x_tr = df_train[all]
+          y_tr = df_train.drop(all,axis=1)
+          x_te = df_test[all]
+          y_te = df_test.drop(all,axis=1)
+          x_va = df_val[all]
+          y_va = df_val.drop(all,axis=1)
+          labels = list(y_tr.columns)
 
-        x_tr = pd.concat([x_tr,x_va])
-        y_tr = pd.concat([y_tr,y_va])
+          x_tr = pd.concat([x_tr,x_va])
+          y_tr = pd.concat([y_tr,y_va])
+        else:
+          all.remove('Length')
+          pth = './magnatagatune/perceptual_features.csv'
+          df = pd.read_csv(pth).drop(['Track'],axis=1)
+          df.rename(columns = {'dom':'Dominants','sub':'Subdominants'}, inplace = True)
+          x = df[all]
+          y = df.drop(all,axis=1)
+          y = y[music_tags]
+          labels = list(y.columns)
+          x_tr,x_te,y_tr,y_te = train_test_split(x,y,train_size=0.8, random_state=4)
  
-        scaler = StandardScaler()
-        scaler.fit(x_tr)
-        x_tr=scaler.transform(x_tr)
-        x_te=scaler.transform(x_te)
+          scaler = StandardScaler()
+          scaler.fit(x_tr)
+          x_tr=scaler.transform(x_tr)
+          x_te=scaler.transform(x_te)
 
         xgb_estimator = xgb.XGBClassifier(max_depth=3,learning_rate = 0.1,objective='binary:logistic',eval_metric='auc', n_estimators = 70, gamma=7.5628225927223830,min_child_weight=6)
 
         multilabel_model = MultiOutputClassifier(xgb_estimator)
-
         multilabel_model.fit(x_tr, y_tr,verbose=True)
 
         evaluate_auc(multilabel_model,x_te,x_tr,y_tr,y_te,labels)
